@@ -1,0 +1,9 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  run:server:
+    cmds:
+      - go run cmd/server/main.go
+    silent: false
