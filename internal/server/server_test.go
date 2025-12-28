@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	api "prolog/api/v1"
+	"prolog/internal/auth"
 	"prolog/internal/log"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 )
@@ -21,6 +23,7 @@ func TestServer(t *testing.T) {
 		"produce/consume a message to/from the log succeeds": testProduceConsume,
 		"produce/consume stream succeeds":                    testProduceConsumeStream,
 		"consume past log boundary fails":                    testConsumePastBoundary,
+		"unauthorized fails":                                 testUnauthorized,
 	}
 	for scenario, fn := range scenarios {
 		t.Run(scenario, func(t *testing.T) {
@@ -73,8 +76,11 @@ func setupTest(t *testing.T, fn func(*Config)) (rootClient, nobodyClient api.Log
 	clog, err := log.NewLog(dir, log.Config{})
 	require.NoError(t, err)
 
+	authorizer, err := auth.New(config.ACLModelFile, config.ACLPolicyFile)
+	require.NoError(t, err)
 	cfg = &Config{
-		CommitLog: clog,
+		CommitLog:  clog,
+		Authorizer: authorizer,
 	}
 	if fn != nil {
 		fn(cfg)
@@ -108,6 +114,30 @@ func testProduceConsume(t *testing.T, client, _ api.LogClient, config *Config) {
 	require.NoError(t, err)
 	require.Equal(t, want.Value, consume.Record.Value)
 	require.Equal(t, want.Offset, consume.Record.Offset)
+}
+
+func testUnauthorized(t *testing.T, _, client api.LogClient, config *Config) {
+	ctx := context.Background()
+	produce, err := client.Produce(ctx, &api.ProduceRequest{
+		Record: &api.Record{
+			Value: []byte("hello world"),
+		},
+	})
+	if produce != nil {
+		t.Fatalf("produce response should be nil")
+	}
+	gotCode, wantCode := status.Code(err), codes.PermissionDenied
+	if gotCode != wantCode {
+		t.Fatalf("got code: %d, want: %d", gotCode, wantCode)
+	}
+	consume, err := client.Consume(ctx, &api.ConsumeRequest{Offset: 0})
+	if consume != nil {
+		t.Fatalf("consume response should be nil")
+	}
+	gotCode, wantCode = status.Code(err), codes.PermissionDenied
+	if gotCode != wantCode {
+		t.Fatalf("got code: %d, want: %d", gotCode, wantCode)
+	}
 }
 
 func testConsumePastBoundary(t *testing.T, client, _ api.LogClient, config *Config) {
