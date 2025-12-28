@@ -18,6 +18,10 @@ const (
 	consumeAction  = "consume"
 )
 
+// TODO: Implement observability with open telemetry. the packages used in the
+// book for observability i.e. opencensus is now deprecated and merged into
+// opentelemetry
+
 type CommitLog interface {
 	Append(*api.Record) (uint64, error)
 	Read(uint64) (*api.Record, error)
@@ -36,8 +40,12 @@ var _ api.LogServer = (*grpcServer)(nil)
 
 func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, error) {
 	extraOpts := []grpc.ServerOption{
-		grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(authenticate)),
-		grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(authenticate)),
+		grpc.ChainStreamInterceptor(
+			grpc_auth.StreamServerInterceptor(authenticate),
+		),
+		grpc.ChainUnaryInterceptor(
+			grpc_auth.UnaryServerInterceptor(authenticate),
+		),
 	}
 	opts = append(opts, extraOpts...)
 
