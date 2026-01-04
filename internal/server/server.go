@@ -31,9 +31,14 @@ type Authorizer interface {
 	Authorize(subject, object, action string) error
 }
 
+type ServersGetter interface {
+	GetServers() ([]*api.Server, error)
+}
+
 type Config struct {
-	CommitLog  CommitLog
-	Authorizer Authorizer
+	CommitLog     CommitLog
+	Authorizer    Authorizer
+	ServersGetter ServersGetter
 }
 
 var _ api.LogServer = (*grpcServer)(nil)
@@ -136,6 +141,14 @@ func (s *grpcServer) ConsumeStream(req *api.ConsumeRequest, stream api.Log_Consu
 			req.Offset++
 		}
 	}
+}
+
+func (s *grpcServer) GetServers(ctx context.Context, req *api.GetServersRequest) (*api.GetServersResponse, error) {
+	servers, err := s.ServersGetter.GetServers()
+	if err != nil {
+		return nil, err
+	}
+	return &api.GetServersResponse{Servers: servers}, nil
 }
 
 func authenticate(ctx context.Context) (context.Context, error) {
