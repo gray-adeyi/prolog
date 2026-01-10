@@ -102,7 +102,7 @@ func (c *cli) setupConfig(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	
+
 	if c.cfg.PeerTLSConfig.CertFile != "" && c.cfg.PeerTLSConfig.KeyFile != "" {
 		c.cfg.Config.PeerTLSConfig, err = config.SetupTLSConfig(c.cfg.PeerTLSConfig)
 		if err != nil {
@@ -112,7 +112,7 @@ func (c *cli) setupConfig(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (c *cli) run(cmd *cobra.Command, args []string) error{
+func (c *cli) run(cmd *cobra.Command, args []string) error {
 	var err error
 	agent, err := agent.New(c.cfg.Config)
 	if err != nil {
