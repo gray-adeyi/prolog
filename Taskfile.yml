@@ -4,12 +4,17 @@ version: '3'
 
 vars:
   CONFIG_PATH: "{{.USER_WORKING_DIR}}/.prolog"
+  CONTAINER_RUNTIME: podman
+  IMAGE_TAG: 0.0.1
 
 tasks:
   run:server:
     cmds:
       - go run cmd/server/main.go
     silent: false
+  build-image:
+    cmds:
+      - '{{.CONTAINER_RUNTIME}} build -t github.com/gray-adeyi/prolog:{{.IMAGE_TAG}} .'
   compile:
     cmds:
       - protoc api/v1/*.proto --go_out=. --go-grpc_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --proto_path=.
